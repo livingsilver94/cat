@@ -1,6 +1,10 @@
 extern crate clap;
 
 use clap::{App, Arg, ArgMatches};
+use std::fs::File;
+use std::io::prelude::*;
+use std::io;
+use std::iter::FromIterator;
 use NumberingMode::*;
 
 fn main() {
@@ -52,9 +56,12 @@ fn main() {
         end_char,
         squeeze_blank: usr_input.is_present("squeeze-blank"),
         tab_char,
-        show_nonprinting: has_any(&usr_input, &vec!["show-all", "show-nonprinting", "vE", "vT",]),
+        show_nonprinting: has_any(
+            &usr_input,
+            &vec!["show-all", "show-nonprinting", "vE", "vT"],
+        ),
     };
-    println!("{:?}", options);
+    print_files(&options, &Vec::from_iter(usr_input.values_of("files").unwrap()));
 }
 
 #[derive(Debug)]
@@ -66,7 +73,17 @@ struct CatOptions {
     show_nonprinting: bool,
 }
 
-#[derive(Debug)]
+impl CatOptions {
+    fn must_read_by_line(&self) -> bool {
+        self.numbering_mode != NumberNone
+            || self.end_char.is_some()
+            || self.squeeze_blank
+            || self.tab_char.is_some()
+            || self.show_nonprinting
+    }
+}
+
+#[derive(Debug, PartialEq)]
 enum NumberingMode {
     NumberAll,
     NumberNonEmpty,
@@ -80,4 +97,19 @@ fn has_any(args: &ArgMatches, opt_names: &[&str]) -> bool {
         }
     }
     false
+}
+
+fn print_files(options: &CatOptions, filenames: &[&str]) {
+    let mut buffer: Vec<u8> = Vec::with_capacity(1024 * 5);
+    if !options.must_read_by_line() {
+        for path in filenames {
+            let mut file: Box<Read> = if *path == "-" {
+                Box::new(io::stdin()) as Box<Read>
+            } else {
+                Box::new(File::open(path).unwrap())
+            };
+            file.read_to_end(&mut buffer);
+            io::stdout().write(&buffer);
+        }
+    }
 }
