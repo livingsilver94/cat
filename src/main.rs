@@ -89,7 +89,7 @@ enum NumberingMode {
 }
 
 fn print_files(options: &CatOptions, filenames: &[&str]) {
-    let mut buffer: Vec<u8> = Vec::with_capacity(1024 * 5);
+    let mut buffer = [0; 1024 * 64];
     if !options.must_read_by_line() {
         for path in filenames {
             let mut file: Box<Read> = if *path == "-" {
@@ -97,7 +97,7 @@ fn print_files(options: &CatOptions, filenames: &[&str]) {
             } else {
                 Box::new(File::open(path).unwrap())
             };
-            file.read_to_end(&mut buffer);
+            file.read(&mut buffer);
             io::stdout().write(&buffer);
         }
     }
