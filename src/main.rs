@@ -1,52 +1,47 @@
-extern crate clap;
+extern crate getopts;
 
-use clap::{App, Arg, ArgMatches};
+use std::env;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io;
-use std::iter::FromIterator;
+use std::io::prelude::*;
 use NumberingMode::*;
 
 fn main() {
-    let usr_input = App::new(env!("CARGO_PKG_NAME"))
-        .version(env!("CARGO_PKG_VERSION"))
-        .author(env!("CARGO_PKG_AUTHORS"))
-        .arg(Arg::with_name("show-all").short("A").long("show-all"))
-        .arg(
-            Arg::with_name("number-nonblank")
-                .short("b")
-                .long("number-nonblank"),
+    let args: Vec<String> = env::args().skip(1).collect();
+    let opts = getopts::Options::new()
+        .optflag("A", "show-all", "equivalent to -vET")
+        .optflag(
+            "b",
+            "number-nonblank",
+            "number nonempty output lines, overrides -n",
         )
-        .arg(Arg::with_name("vE").short("e"))
-        .arg(Arg::with_name("show-ends").short("E").long("show-ends"))
-        .arg(Arg::with_name("number").short("n").long("number"))
-        .arg(
-            Arg::with_name("squeeze-blank")
-                .short("s")
-                .long("squeeze-blank"),
+        .optflag("e", "", "equivalent to -vE")
+        .optflag("E", "show-ends", "display $ at end of each line")
+        .optflag("n", "number", "number all output lines")
+        .optflag("s", "squeeze-blank", "suppress repeated empty output lines")
+        .optflag("t", "", "equivalent to -vT")
+        .optflag("T", "show-tabs", "display TAB characters as ^I")
+        .optflag(
+            "v",
+            "show-nonprinting",
+            "use ^ and M- notation, except for LFD and TAB",
         )
-        .arg(Arg::with_name("vT").short("t"))
-        .arg(Arg::with_name("show-tabs").short("T").long("show-tabs"))
-        .arg(
-            Arg::with_name("show-nonprinting")
-                .short("v")
-                .long("show-nonprinting"),
-        )
-        .arg(Arg::with_name("files").multiple(true))
-        .get_matches();
-    let numbering_mode = if usr_input.is_present("number-nonblank") {
+        .parse(&args)
+        .unwrap();
+
+    let numbering_mode = if opts.opt_present("b") {
         NumberNonEmpty
-    } else if usr_input.is_present("number") {
+    } else if opts.opt_present("n") {
         NumberAll
     } else {
         NumberNone
     };
-    let end_char = if has_any(&usr_input, &vec!["show-all", "show-ends", "vE"]) {
+    let end_char = if opts.opts_present(&["A".to_string(), "E".to_string(), "e".to_string()]) {
         Some(String::from("$"))
     } else {
         None
     };
-    let tab_char = if has_any(&usr_input, &vec!["show-all", "show-tabs", "vT"]) {
+    let tab_char = if opts.opts_present(&["A".to_string(), "T".to_string(), "t".to_string()]) {
         Some(String::from("^I"))
     } else {
         None
@@ -54,14 +49,17 @@ fn main() {
     let options = CatOptions {
         numbering_mode,
         end_char,
-        squeeze_blank: usr_input.is_present("squeeze-blank"),
+        squeeze_blank: opts.opt_present("s"),
         tab_char,
-        show_nonprinting: has_any(
-            &usr_input,
-            &vec!["show-all", "show-nonprinting", "vE", "vT"],
-        ),
+        show_nonprinting: opts.opts_present(&[
+            'A'.to_string(),
+            'v'.to_string(),
+            'e'.to_string(),
+            't'.to_string(),
+        ]),
     };
-    print_files(&options, &Vec::from_iter(usr_input.values_of("files").unwrap()));
+    let files: Vec<&str> = opts.free.iter().map(|x| &x[..]).collect();
+    print_files(&options, &files);
 }
 
 #[derive(Debug)]
@@ -88,15 +86,6 @@ enum NumberingMode {
     NumberAll,
     NumberNonEmpty,
     NumberNone,
-}
-
-fn has_any(args: &ArgMatches, opt_names: &[&str]) -> bool {
-    for opt in opt_names {
-        if args.is_present(opt) {
-            return true;
-        }
-    }
-    false
 }
 
 fn print_files(options: &CatOptions, filenames: &[&str]) {
