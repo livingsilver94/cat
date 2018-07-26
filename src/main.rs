@@ -36,12 +36,12 @@ fn main() {
     } else {
         NumberNone
     };
-    let end_char = if opts.opts_present(&["A".to_string(), "E".to_string(), "e".to_string()]) {
+    let end_char = if opts.opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()]) {
         Some(String::from("$"))
     } else {
         None
     };
-    let tab_char = if opts.opts_present(&["A".to_string(), "T".to_string(), "t".to_string()]) {
+    let tab_char = if opts.opts_present(&['A'.to_string(), 'T'.to_string(), 't'.to_string()]) {
         Some(String::from("^I"))
     } else {
         None
@@ -89,16 +89,24 @@ enum NumberingMode {
 }
 
 fn print_files(options: &CatOptions, filenames: &[&str]) {
-    let mut buffer = [0; 1024 * 64];
     if !options.must_read_by_line() {
-        for path in filenames {
-            let mut file: Box<Read> = if *path == "-" {
-                Box::new(io::stdin()) as Box<Read>
-            } else {
-                Box::new(File::open(path).unwrap())
-            };
-            file.read(&mut buffer);
-            io::stdout().write(&buffer);
-        }
+        fast_print(&filenames);
     }
+}
+
+/// Print a list of file as-is, without any manipulation
+fn fast_print(filenames: &[&str]) -> Result<(), io::Error> {
+    // A 32 kB buffer should be enough. Most of cat'd files are small
+    let mut buffer = [0; 1024 * 32];
+    for path in filenames {
+        // Use a Trait object since Stdin and File are different structs
+        let mut file: Box<Read> = if *path == "-" {
+            Box::new(io::stdin())
+        } else {
+            Box::new(File::open(path)?)
+        };
+        file.read(&mut buffer)?;
+        io::stdout().write(&buffer)?;
+    }
+    Ok(())
 }
