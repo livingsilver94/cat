@@ -98,6 +98,7 @@ fn print_files(options: &CatOptions, filenames: &[&str]) {
 fn fast_print(filenames: &[&str]) -> Result<(), io::Error> {
     // A 32 kB buffer should be enough. Most of cat'd files are small
     let mut buffer = [0; 1024 * 32];
+    let mut stdout = io::stdout();
     for path in filenames {
         // Use a Trait object since Stdin and File are different structs
         let mut file: Box<Read> = if *path == "-" {
@@ -105,8 +106,12 @@ fn fast_print(filenames: &[&str]) -> Result<(), io::Error> {
         } else {
             Box::new(File::open(path)?)
         };
-        file.read(&mut buffer)?;
-        io::stdout().write(&buffer)?;
+        while let Ok(n) = file.read(&mut buffer) {
+            if n == 0 {
+                break;
+            }
+            stdout.write(&buffer[..n])?;
+        }
     }
     Ok(())
 }
