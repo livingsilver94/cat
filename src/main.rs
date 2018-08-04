@@ -62,7 +62,6 @@ fn main() {
     print_files(&options, &files);
 }
 
-#[derive(Debug)]
 struct CatOptions {
     numbering_mode: NumberingMode,
     end_char: Option<String>,
@@ -81,17 +80,18 @@ impl CatOptions {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 enum NumberingMode {
     NumberAll,
     NumberNonEmpty,
     NumberNone,
 }
 
-fn print_files(options: &CatOptions, filenames: &[&str]) {
+fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error> {
     if !options.must_read_by_line() {
-        fast_print(&filenames);
+        fast_print(&filenames)?;
     }
+    Ok(())
 }
 
 /// Print a list of file as-is, without any manipulation
@@ -101,11 +101,7 @@ fn fast_print(filenames: &[&str]) -> Result<(), io::Error> {
     let mut stdout = io::stdout();
     for path in filenames {
         // Use a Trait object since Stdin and File are different structs
-        let mut file: Box<Read> = if *path == "-" {
-            Box::new(io::stdin())
-        } else {
-            Box::new(File::open(path)?)
-        };
+        let mut file = open_file(path)?;
         while let Ok(n) = file.read(&mut buffer) {
             if n == 0 {
                 break;
@@ -114,4 +110,12 @@ fn fast_print(filenames: &[&str]) -> Result<(), io::Error> {
         }
     }
     Ok(())
+}
+
+fn open_file(path: &str) -> Result<Box<Read>, io::Error> {
+    Ok(if path == "-" {
+        Box::new(io::stdin())
+    } else {
+        Box::new(File::open(path)?)
+    })
 }
