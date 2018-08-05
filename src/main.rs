@@ -90,24 +90,50 @@ enum NumberingMode {
 fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error> {
     if !options.must_read_by_line() {
         fast_print(&filenames)?;
+    } else {
+        let stdout = io::stdout();
+        let mut stdout_handle = stdout.lock();
+        let mut buf = Vec::with_capacity(64);
+        let mut line = 1;
+        let numbering_header = |x| format!("     {} ", x).as_bytes();
+        for path in filenames {
+            let mut buf_reader = io::BufReader::new(open_file(path)?);
+            while let Ok(len) = buf_reader.read_until(b'\n', &mut buf) {
+                if len == 0 {
+                    break;
+                }
+                if options.numbering_mode == NumberingMode::NumberAll
+                    || (options.numbering_mode == NumberingMode::NumberNonEmpty
+                        && buf.len() != 2
+                        && buf[0] != b'\n')
+                {
+                    stdout_handle.write(format!("     {} ", line).as_bytes())?;
+                }
+                /*match options.numbering_mode {
+                    NumberAll => {
+                        stdout_handle.write(numbering_header(line));
+                        line+=1;
+                    },
+                    NumberNonEmpty => {
+
+                    }
+                }*/
+                stdout_handle.write(&buf)?;
+                buf.clear();
+                line+=1;
+            }
+        }
     }
     Ok(())
 }
 
 /// Print a list of file as-is, without any manipulation
 fn fast_print(filenames: &[&str]) -> Result<(), io::Error> {
-    // A 32 kB buffer should be enough. Most of cat'd files are small
-    let mut buffer = [0; 1024 * 32];
-    let mut stdout = io::stdout();
+    let stdout = io::stdout();
+    let mut stdout_handle = stdout.lock();
     for path in filenames {
-        // Use a Trait object since Stdin and File are different structs
         let mut file = open_file(path)?;
-        while let Ok(n) = file.read(&mut buffer) {
-            if n == 0 {
-                break;
-            }
-            stdout.write(&buffer[..n])?;
-        }
+        io::copy(&mut file, &mut stdout_handle)?;
     }
     Ok(())
 }
