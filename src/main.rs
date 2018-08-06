@@ -112,8 +112,18 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
                 if options.numbering_mode == NumberingMode::NumberAll
                     || (options.numbering_mode == NumberingMode::NumberNonEmpty && !is_blank(&buf))
                 {
-                    stdout_handle.write(format!("     {}  ", line).as_bytes())?;
+                    stdout_handle.write(
+                        format!(
+                            "{}{}\t",
+                            &"     "[(number_of_digits(line) as usize) - 1..],
+                            line
+                        ).as_bytes(),
+                    )?;
                     line += 1;
+                }
+                if let Some(ref chr) = options.end_char {
+                    append_str
+                (&mut buf, &chr);
                 }
                 stdout_handle.write(&buf)?;
                 buf.clear();
@@ -144,4 +154,23 @@ fn open_file(path: &str) -> Result<Box<Read>, io::Error> {
 
 fn is_blank(line: &[u8]) -> bool {
     line.len() <= 2 && line[0] == b'\n'
+}
+
+fn append_str(line: &mut Vec<u8>, item: &str) {
+    let mut index = line.len() - 1;
+    for chr in item.chars() {
+        line.insert(index, chr as u8);
+        index += 1;
+    }
+}
+
+fn number_of_digits(int: u64) -> u32 {
+    match int {
+        0...9 => 1,
+        10...99 => 2,
+        100...999 => 3,
+        1000...9999 => 4,
+        10000...99999 => 5,
+        _ => 6,
+    }
 }
