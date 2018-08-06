@@ -95,7 +95,6 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
         let mut stdout_handle = stdout.lock();
         let mut buf = Vec::with_capacity(64);
         let mut line = 1;
-        let numbering_header = |x| format!("     {} ", x).as_bytes();
         for path in filenames {
             let mut buf_reader = io::BufReader::new(open_file(path)?);
             while let Ok(len) = buf_reader.read_until(b'\n', &mut buf) {
@@ -103,24 +102,13 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
                     break;
                 }
                 if options.numbering_mode == NumberingMode::NumberAll
-                    || (options.numbering_mode == NumberingMode::NumberNonEmpty
-                        && buf.len() != 2
-                        && buf[0] != b'\n')
+                    || (options.numbering_mode == NumberingMode::NumberNonEmpty && !is_blank(&buf))
                 {
                     stdout_handle.write(format!("     {} ", line).as_bytes())?;
+                    line += 1;
                 }
-                /*match options.numbering_mode {
-                    NumberAll => {
-                        stdout_handle.write(numbering_header(line));
-                        line+=1;
-                    },
-                    NumberNonEmpty => {
-
-                    }
-                }*/
                 stdout_handle.write(&buf)?;
                 buf.clear();
-                line+=1;
             }
         }
     }
@@ -144,4 +132,8 @@ fn open_file(path: &str) -> Result<Box<Read>, io::Error> {
     } else {
         Box::new(File::open(path)?)
     })
+}
+
+fn is_blank(line: &[u8]) -> bool {
+    line.len() <= 1 && line[0] == b'\n'
 }
