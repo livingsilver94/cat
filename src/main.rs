@@ -95,16 +95,24 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
         let mut stdout_handle = stdout.lock();
         let mut buf = Vec::with_capacity(64);
         let mut line = 1;
+        let mut was_blank = false;
         for path in filenames {
             let mut buf_reader = io::BufReader::new(open_file(path)?);
             while let Ok(len) = buf_reader.read_until(b'\n', &mut buf) {
                 if len == 0 {
                     break;
                 }
+                if options.squeeze_blank {
+                    if was_blank && is_blank(&buf) {
+                        buf.clear();
+                        continue;
+                    }
+                    was_blank = is_blank(&buf);
+                }
                 if options.numbering_mode == NumberingMode::NumberAll
                     || (options.numbering_mode == NumberingMode::NumberNonEmpty && !is_blank(&buf))
                 {
-                    stdout_handle.write(format!("     {} ", line).as_bytes())?;
+                    stdout_handle.write(format!("     {}  ", line).as_bytes())?;
                     line += 1;
                 }
                 stdout_handle.write(&buf)?;
@@ -135,5 +143,5 @@ fn open_file(path: &str) -> Result<Box<Read>, io::Error> {
 }
 
 fn is_blank(line: &[u8]) -> bool {
-    line.len() <= 1 && line[0] == b'\n'
+    line.len() <= 2 && line[0] == b'\n'
 }
