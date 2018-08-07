@@ -109,8 +109,8 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
                     }
                     was_blank = is_blank(&buf);
                 }
-                if options.numbering_mode == NumberingMode::NumberAll
-                    || (options.numbering_mode == NumberingMode::NumberNonEmpty && !is_blank(&buf))
+                if options.numbering_mode == NumberAll
+                    || (options.numbering_mode == NumberNonEmpty && !is_blank(&buf))
                 {
                     stdout_handle.write(
                         format!(
@@ -122,8 +122,7 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
                     line += 1;
                 }
                 if let Some(ref chr) = options.end_char {
-                    append_str
-                (&mut buf, &chr);
+                    append_str(&mut buf, &chr);
                 }
                 stdout_handle.write(&buf)?;
                 buf.clear();
