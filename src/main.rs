@@ -98,8 +98,8 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
         let mut was_blank = false;
         for path in filenames {
             let mut buf_reader = io::BufReader::new(open_file(path)?);
-            while let Ok(len) = buf_reader.read_until(b'\n', &mut buf) {
-                if len == 0 {
+            while let Ok(ref len) = buf_reader.read_until(b'\n', &mut buf) {
+                if *len == 0 {
                     break;
                 }
                 if options.squeeze_blank {
@@ -122,7 +122,9 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
                     line += 1;
                 }
                 if let Some(ref chr) = options.end_char {
-                    append_str(&mut buf, &chr);
+                    if buf[len - 1] == b'\n' {
+                        append_str(&mut buf, &chr);
+                    }
                 }
                 stdout_handle.write(&buf)?;
                 buf.clear();
@@ -155,6 +157,7 @@ fn is_blank(line: &[u8]) -> bool {
     line.len() <= 2 && line[0] == b'\n'
 }
 
+/// Insert a string before newline character
 fn append_str(line: &mut Vec<u8>, item: &str) {
     let mut index = line.len() - 1;
     for chr in item.chars() {
