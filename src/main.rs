@@ -30,21 +30,21 @@ fn main() {
         .unwrap();
 
     let numbering_mode = if opts.opt_present("b") {
-        NumberNonEmpty
+        NonEmpty
     } else if opts.opt_present("n") {
-        NumberAll
+        All
     } else {
-        NumberNone
+        None
     };
     let end_char = if opts.opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()]) {
         Some(String::from("$"))
     } else {
-        None
+        Option::None
     };
     let tab_char = if opts.opts_present(&['A'.to_string(), 'T'.to_string(), 't'.to_string()]) {
         Some(String::from("^I"))
     } else {
-        None
+        Option::None
     };
     let options = CatOptions {
         numbering_mode,
@@ -71,8 +71,8 @@ struct CatOptions {
 }
 
 impl CatOptions {
-    fn must_read_by_line(&self) -> bool {
-        self.numbering_mode != NumberNone
+    fn should_manipulate(&self) -> bool {
+        self.numbering_mode != None
             || self.end_char.is_some()
             || self.squeeze_blank
             || self.tab_char.is_some()
@@ -82,13 +82,13 @@ impl CatOptions {
 
 #[derive(PartialEq)]
 enum NumberingMode {
-    NumberAll,
-    NumberNonEmpty,
-    NumberNone,
+    All,
+    NonEmpty,
+    None,
 }
 
 fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error> {
-    if !options.must_read_by_line() {
+    if !options.should_manipulate() {
         fast_print(&filenames)?;
     } else {
         let stdout = io::stdout();
@@ -109,10 +109,10 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
                     }
                     was_blank = is_blank(&buf);
                 }
-                if options.numbering_mode == NumberAll
-                    || (options.numbering_mode == NumberNonEmpty && !is_blank(&buf))
+                if options.numbering_mode == All
+                    || (options.numbering_mode == NonEmpty && !is_blank(&buf))
                 {
-                    stdout_handle.write(
+                    stdout_handle.write_all(
                         format!(
                             "{}{}\t",
                             &"     "[(number_of_digits(line) as usize) - 1..],
@@ -129,13 +129,13 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
                 if let Some(ref repl) = options.tab_char {
                     for &byte in &buf {
                         if byte == b'\t' {
-                            stdout_handle.write(repl.as_bytes())?;
+                            stdout_handle.write_all(repl.as_bytes())?;
                         } else {
-                            stdout_handle.write(&[byte])?;
-                        }
+                            stdout_handle.write_all(&[byte])?;
+						}
                     }
                 } else {
-                    stdout_handle.write(&buf)?;
+                    stdout_handle.write_all(&buf)?;
                 }
                 buf.clear();
             }
