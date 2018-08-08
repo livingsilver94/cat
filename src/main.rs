@@ -126,7 +126,17 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
                         append_str(&mut buf, &chr);
                     }
                 }
-                stdout_handle.write(&buf)?;
+                if let Some(ref repl) = options.tab_char {
+                    for &byte in &buf {
+                        if byte == b'\t' {
+                            stdout_handle.write(repl.as_bytes())?;
+                        } else {
+                            stdout_handle.write(&[byte])?;
+                        }
+                    }
+                } else {
+                    stdout_handle.write(&buf)?;
+                }
                 buf.clear();
             }
         }
