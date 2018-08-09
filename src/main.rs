@@ -112,6 +112,8 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
 				if options.numbering_mode == All
 					|| (options.numbering_mode == NonEmpty && !is_blank(&buf))
 				{
+					// Once u64::to_bytes will be out from nightly, we will be able to
+					// avoid that String allocation and print bytes directly into the buffer
 					stdout_handle.write_all(
 						format!(
 							"{}{}\t",
@@ -132,7 +134,16 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
 						if let Some(ref tab_str) = options.tab_char {
 							stdout_handle.write_all(tab_str.as_bytes())?;
 						} else if options.show_nonprinting {
-							stdout_handle.write_all(make_byte_printable(byte).as_bytes())?;
+							match byte {
+								0...8 | 11...31 => stdout_handle.write_all(&[b'^', byte + 64])?,
+								127 => stdout_handle.write_all(&[b'^', b'?'])?,
+								128...159 => {
+									stdout_handle.write_all(&[b'M', b'-', b'^', byte - 64])?
+								}
+								160...254 => stdout_handle.write_all(&[b'M', b'-', byte - 128])?,
+								255 => stdout_handle.write_all(&[b'M', b'-', b'^', b'?'])?,
+								_ => stdout_handle.write_all(&[byte])?,
+							};
 						} else {
 							stdout_handle.write_all(&[byte])?;
 						}
@@ -168,14 +179,14 @@ fn open_file(path: &str) -> Result<Box<Read>, io::Error> {
 }
 
 fn is_blank(line: &[u8]) -> bool {
-	line.len() <= 2 && line[0] == b'\n'
+	line[0] == b'\n'
 }
 
 /// Insert a string before newline character
 fn append_str(line: &mut Vec<u8>, item: &str) {
 	let mut index = line.len() - 1;
-	for chr in item.chars() {
-		line.insert(index, chr as u8);
+	for chr in item.bytes() {
+		line.insert(index, chr);
 		index += 1;
 	}
 }
@@ -188,16 +199,5 @@ fn number_of_digits(int: u64) -> u32 {
 		1000...9999 => 4,
 		10000...99999 => 5,
 		_ => 6,
-	}
-}
-
-fn make_byte_printable(byte: u8) -> String {
-	match byte {
-		0...31 => format!("^{}", byte + 64),
-		127 => "^?".to_string(),
-		128...159 => format!("M-^{}", byte - 128),
-		160...254 => format!("M-{}", byte - 128),
-		255 => "M-^?".to_string(),
-		32...126 | _ => unsafe { String::from_utf8_unchecked([byte].to_vec()) },
 	}
 }
