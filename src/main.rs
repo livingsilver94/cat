@@ -4,7 +4,7 @@ use std::env;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
-use NumberingMode::*;
+use NumberingMode::{All, NonEmpty};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -37,7 +37,7 @@ fn main() {
         } else if matches.opt_present("n") {
             All
         } else {
-            None
+            NumberingMode::None
         };
         let end_char = if matches.opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()])
         {
@@ -85,7 +85,7 @@ enum NumberingMode {
 
 fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error> {
     // Check if we can print files without any manipulation (hence faster)
-    if options.numbering_mode == None
+    if options.numbering_mode == NumberingMode::None
         && options.end_char.is_none()
         && !options.squeeze_blank
         && options.tab_char.is_none()
