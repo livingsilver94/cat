@@ -30,7 +30,10 @@ fn main() {
         .optflag("h", "help", "display this help and exit");
     let matches = opts.parse(&args).unwrap();
     if matches.opt_present("h") {
-        println!("{}", opts.usage("Usage: cat [OPTION]... [FILE]...\nConcatenate FILE(s) to standard output."));
+        println!(
+            "{}",
+            opts.usage("Usage: cat [OPTION]... [FILE]...\nConcatenate FILE(s) to standard output.")
+        );
     } else {
         let numbering_mode = if matches.opt_present("b") {
             NonEmpty
@@ -39,18 +42,12 @@ fn main() {
         } else {
             NumberingMode::None
         };
-        let end_char = if matches.opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()])
-        {
-            Some(String::from("$"))
-        } else {
-            Option::None
-        };
-        let tab_char = if matches.opts_present(&['A'.to_string(), 'T'.to_string(), 't'.to_string()])
-        {
-            Some(String::from("^I"))
-        } else {
-            Option::None
-        };
+        let end_char = matches
+            .opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()])
+            .as_some("$".to_string());
+        let tab_char = matches
+            .opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()])
+            .as_some("^I".to_string());
         let options = CatOptions {
             numbering_mode,
             end_char,
@@ -198,4 +195,19 @@ fn numbering_prefix(line_number: u64) -> &'static str {
         _ => 6,
     };
     &"     "[spaces - 1..]
+}
+
+trait Optionify<T> {
+    fn as_some(&self, value: T) -> Option<T>;
+}
+
+impl<T> Optionify<T> for bool {
+    #[inline]
+    fn as_some(&self, value: T) -> Option<T> {
+        if *self {
+            Some(value)
+        } else {
+            None
+        }
+    }
 }
