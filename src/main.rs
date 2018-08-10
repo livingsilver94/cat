@@ -8,7 +8,8 @@ use NumberingMode::*;
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
-    let opts = getopts::Options::new()
+    let mut opts = getopts::Options::new();
+    let opts = opts
         .optflag("A", "show-all", "equivalent to -vET")
         .optflag(
             "b",
@@ -26,40 +27,45 @@ fn main() {
             "show-nonprinting",
             "use ^ and M- notation, except for LFD and TAB",
         )
-        .parse(&args)
-        .unwrap();
-
-    let numbering_mode = if opts.opt_present("b") {
-        NonEmpty
-    } else if opts.opt_present("n") {
-        All
+        .optflag("h", "help", "display this help and exit");
+    let matches = opts.parse(&args).unwrap();
+    if matches.opt_present("h") {
+        println!("{}", opts.usage("Usage: cat [OPTION]... [FILE]...\nConcatenate FILE(s) to standard output."));
     } else {
-        None
-    };
-    let end_char = if opts.opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()]) {
-        Some(String::from("$"))
-    } else {
-        Option::None
-    };
-    let tab_char = if opts.opts_present(&['A'.to_string(), 'T'.to_string(), 't'.to_string()]) {
-        Some(String::from("^I"))
-    } else {
-        Option::None
-    };
-    let options = CatOptions {
-        numbering_mode,
-        end_char,
-        squeeze_blank: opts.opt_present("s"),
-        tab_char,
-        show_nonprinting: opts.opts_present(&[
-            'A'.to_string(),
-            'v'.to_string(),
-            'e'.to_string(),
-            't'.to_string(),
-        ]),
-    };
-    let files: Vec<&str> = opts.free.iter().map(|x| &x[..]).collect();
-    print_files(&options, &files);
+        let numbering_mode = if matches.opt_present("b") {
+            NonEmpty
+        } else if matches.opt_present("n") {
+            All
+        } else {
+            None
+        };
+        let end_char = if matches.opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()])
+        {
+            Some(String::from("$"))
+        } else {
+            Option::None
+        };
+        let tab_char = if matches.opts_present(&['A'.to_string(), 'T'.to_string(), 't'.to_string()])
+        {
+            Some(String::from("^I"))
+        } else {
+            Option::None
+        };
+        let options = CatOptions {
+            numbering_mode,
+            end_char,
+            squeeze_blank: matches.opt_present("s"),
+            tab_char,
+            show_nonprinting: matches.opts_present(&[
+                'A'.to_string(),
+                'v'.to_string(),
+                'e'.to_string(),
+                't'.to_string(),
+            ]),
+        };
+        let files: Vec<&str> = matches.free.iter().map(|x| &x[..]).collect();
+        print_files(&options, &files);
+    }
 }
 
 struct CatOptions {
