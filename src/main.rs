@@ -70,16 +70,6 @@ struct CatOptions {
     show_nonprinting: bool,
 }
 
-impl CatOptions {
-    fn should_manipulate(&self) -> bool {
-        self.numbering_mode != None
-            || self.end_char.is_some()
-            || self.squeeze_blank
-            || self.tab_char.is_some()
-            || self.show_nonprinting
-    }
-}
-
 #[derive(PartialEq)]
 enum NumberingMode {
     All,
@@ -88,7 +78,13 @@ enum NumberingMode {
 }
 
 fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error> {
-    if !options.should_manipulate() {
+    // Check if we can print files without any manipulation (hence faster)
+    if options.numbering_mode == None
+        && options.end_char.is_none()
+        && !options.squeeze_blank
+        && options.tab_char.is_none()
+        && !options.show_nonprinting
+    {
         fast_print(&filenames)?;
     } else {
         let stdout = io::stdout();
@@ -112,15 +108,10 @@ fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error
                 if options.numbering_mode == All
                     || (options.numbering_mode == NonEmpty && !is_blank(&buf))
                 {
-                    // Once u64::to_bytes will be out from nightly, we will be able to
+                    // Once u64::to_bytes is out from nightly, we will be able to
                     // avoid that String allocation and print bytes directly into the buffer
-                    stdout_handle.write_all(
-                        format!(
-                            "{}{}\t",
-                            &"     "[(number_of_digits(line) as usize) - 1..],
-                            line
-                        ).as_bytes(),
-                    )?;
+                    stdout_handle
+                        .write_all(format!("{}{}\t", numbering_prefix(line), line).as_bytes())?;
                     line += 1;
                 }
                 if let Some(ref chr) = options.end_char {
@@ -191,13 +182,14 @@ fn append_str(line: &mut Vec<u8>, item: &str) {
     }
 }
 
-fn number_of_digits(int: u64) -> u32 {
-    match int {
+fn numbering_prefix(line_number: u64) -> &'static str {
+    let spaces = match line_number {
         0...9 => 1,
         10...99 => 2,
         100...999 => 3,
         1000...9999 => 4,
         10000...99999 => 5,
         _ => 6,
-    }
+    };
+    &"     "[spaces - 1..]
 }
