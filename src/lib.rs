@@ -18,7 +18,7 @@ pub enum NumberingMode {
 	None,
 }
 
-pub fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::Error> {
+pub fn print_files(options: &CatOptions, filenames: &[&str]) -> io::Result<()> {
 	// Check if we can print files without any manipulation (hence faster)
 	if options.numbering_mode == NumberingMode::None
 		&& options.end_char.is_none()
@@ -92,7 +92,7 @@ pub fn print_files(options: &CatOptions, filenames: &[&str]) -> Result<(), io::E
 }
 
 /// Print a list of file as-is, without any manipulation
-pub fn fast_print(filenames: &[&str]) -> Result<(), io::Error> {
+pub fn fast_print(filenames: &[&str]) -> io::Result<()> {
 	let stdout = io::stdout();
 	let mut stdout_handle = stdout.lock();
 	for path in filenames {
@@ -102,7 +102,7 @@ pub fn fast_print(filenames: &[&str]) -> Result<(), io::Error> {
 	Ok(())
 }
 
-fn open_file(path: &str) -> Result<Box<Read>, io::Error> {
+fn open_file(path: &str) -> io::Result<Box<Read>> {
 	Ok(if path == "-" {
 		Box::new(io::stdin())
 	} else {
