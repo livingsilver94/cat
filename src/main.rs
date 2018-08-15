@@ -4,6 +4,7 @@ extern crate getopts;
 use cat::NumberingMode::{All, NonEmpty};
 use cat::{CatOptions, NumberingMode, Optionify};
 use std::env;
+use std::process;
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -60,6 +61,17 @@ fn main() {
             ]),
         };
         let files: Vec<&str> = matches.free.iter().map(|x| &x[..]).collect();
-        cat::print_files(&options, &files);
+        if let Err(error) = cat::print_files(&options, &files) {
+            match error.get_ref() {
+                Some(inner) => {
+                    eprintln!("{}", inner);
+                    process::exit(1);
+                }
+                None => {
+                    eprintln!("{}", error);
+                    process::exit(error.raw_os_error().unwrap());
+                }
+            }
+        }
     }
 }

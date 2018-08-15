@@ -1,3 +1,4 @@
+use std::fs;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -103,11 +104,26 @@ pub fn fast_print(filenames: &[&str]) -> io::Result<()> {
 }
 
 fn open_file(path: &str) -> io::Result<Box<Read>> {
-	Ok(if path == "-" {
-		Box::new(io::stdin())
+	if path == "-" {
+		Ok(Box::new(io::stdin()))
 	} else {
-		Box::new(File::open(path)?)
-	})
+		match File::open(path) {
+			Ok(val) => {
+				if val.metadata()?.is_file() {
+					Ok(Box::new(val))
+				} else {
+					Err(io::Error::new(
+						io::ErrorKind::Other,
+						format!("Cannot open {}: Is a directory", path),
+					))
+				}
+			}
+			Err(val) => Err(io::Error::new(
+				val.kind(),
+				format!("Cannot open {}: {}", path, val),
+			)),
+		}
+	}
 }
 
 fn is_blank(line: &[u8]) -> bool {
