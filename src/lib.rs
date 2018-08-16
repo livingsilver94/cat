@@ -1,4 +1,3 @@
-use std::fs;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -50,8 +49,6 @@ pub fn print_files(options: &CatOptions, filenames: &[&str]) -> io::Result<()> {
                 if options.numbering_mode == All
                     || (options.numbering_mode == NonEmpty && !is_blank(&buf))
                 {
-                    // Once u64::to_bytes is out from nightly, we will be able to
-                    // avoid that String allocation and print bytes directly into the buffer
                     stdout_handle
                         .write_all(format!("{}{}\t", numbering_prefix(line), line).as_bytes())?;
                     line += 1;
@@ -63,9 +60,10 @@ pub fn print_files(options: &CatOptions, filenames: &[&str]) -> io::Result<()> {
                 }
                 // Check if we have to manipulate the line byte-by-byte
                 if options.end_char.is_some() || options.show_nonprinting {
+                    let tab_str = &options.tab_char.as_ref();
                     for &byte in &buf {
-                        if let Some(ref tab_str) = options.tab_char {
-                            stdout_handle.write_all(tab_str.as_bytes())?;
+                        if byte == b'\t' && tab_str.is_some() {
+                            stdout_handle.write_all(tab_str.unwrap().as_bytes())?;
                         } else if options.show_nonprinting {
                             match byte {
                                 0...8 | 11...31 => stdout_handle.write_all(&[b'^', byte + 64])?,
