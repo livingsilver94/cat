@@ -60,8 +60,11 @@ fn main() {
                 't'.to_string(),
             ]),
         };
-        let files: Vec<&str> = matches.free.iter().map(|x| &x[..]).collect();
-        if let Err(error) = cat::print_files(&options, &files) {
+        let mut files: Vec<&str> = matches.free.iter().map(|x| &x[..]).collect();
+        if files.is_empty() {
+            files.push(&"-");
+        }
+        if let Err(error) = cat::concat(&options, &files) {
             match error.get_ref() {
                 Some(inner) => {
                     eprintln!("{}", inner);

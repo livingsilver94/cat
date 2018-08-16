@@ -18,7 +18,7 @@ pub enum NumberingMode {
     None,
 }
 
-pub fn print_files(options: &CatOptions, filenames: &[&str]) -> io::Result<()> {
+pub fn concat(options: &CatOptions, filenames: &[&str]) -> io::Result<()> {
     // Check if we can print files without any manipulation (hence faster)
     if options.numbering_mode == NumberingMode::None
         && options.end_char.is_none()
