@@ -2,7 +2,7 @@ extern crate cat;
 extern crate getopts;
 
 use cat::NumberingMode::{All, NonEmpty};
-use cat::{CatOptions, NumberingMode, Optionify};
+use cat::{CatOptions, NumberingMode};
 use std::env;
 use std::process;
 
@@ -42,12 +42,10 @@ fn main() {
         } else {
             NumberingMode::None
         };
-        let end_char = matches
-            .opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()])
-            .as_some("$".to_string());
-        let tab_char = matches
-            .opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()])
-            .as_some("^I".to_string());
+        let end_char = Some("$".to_string())
+            .filter(|_| matches.opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()]));
+        let tab_char = Some("^I".to_string())
+            .filter(|_| matches.opts_present(&['A'.to_string(), 'T'.to_string(), 't'.to_string()]));
         let options = CatOptions {
             numbering_mode,
             end_char,

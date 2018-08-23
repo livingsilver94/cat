@@ -149,17 +149,3 @@ fn numbering_prefix(line_number: u64) -> &'static str {
     &"     "[spaces - 1..]
 }
 
-pub trait Optionify<T> {
-    fn as_some(&self, value: T) -> Option<T>;
-}
-
-impl<T> Optionify<T> for bool {
-    #[inline]
-    fn as_some(&self, value: T) -> Option<T> {
-        if *self {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
