@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
+use std::io::BufWriter;
 use NumberingMode::{All, NonEmpty};
 
 pub struct CatOptions {
@@ -29,7 +30,8 @@ pub fn concat(options: &CatOptions, filenames: &[&str]) -> io::Result<()> {
         fast_print(&filenames)?;
     } else {
         let stdout = io::stdout();
-        let mut stdout_handle = stdout.lock();
+        let stdout_lock = stdout.lock();
+        let mut stdout_handle = BufWriter::new(stdout_lock);
         let mut buf = Vec::with_capacity(64);
         let mut line = 1;
         let mut was_blank = false;
@@ -147,4 +149,3 @@ fn numbering_prefix(line_number: u64) -> &'static str {
     };
     &"     "[spaces - 1..]
 }
-
