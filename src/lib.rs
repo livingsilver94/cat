@@ -35,8 +35,8 @@ pub fn concat(options: &CatOptions, filenames: &[&str]) -> io::Result<()> {
         let mut was_blank = false;
         for path in filenames {
             let mut buf_reader = io::BufReader::new(open_file(path)?);
-            while let Ok(ref len) = buf_reader.read_until(b'\n', &mut buf) {
-                if *len == 0 {
+            while let Ok(len) = buf_reader.read_until(b'\n', &mut buf) {
+                if len == 0 {
                     break;
                 }
                 if options.squeeze_blank {
@@ -60,19 +60,18 @@ pub fn concat(options: &CatOptions, filenames: &[&str]) -> io::Result<()> {
                 }
                 // Check if we have to manipulate the line byte-by-byte
                 if options.end_char.is_some() || options.show_nonprinting {
-                    let tab_str = &options.tab_char.as_ref();
                     for &byte in &buf {
-                        if byte == b'\t' && tab_str.is_some() {
-                            stdout_handle.write_all(tab_str.unwrap().as_bytes())?;
+                        if let (b'\t', Some(tab_str)) = (byte, &options.tab_char) {
+                            stdout_handle.write_all(tab_str.as_bytes())?;
                         } else if options.show_nonprinting {
                             match byte {
                                 0...8 | 11...31 => stdout_handle.write_all(&[b'^', byte + 64])?,
-                                127 => stdout_handle.write_all(&[b'^', b'?'])?,
+                                127 => stdout_handle.write_all(b"^?")?,
                                 128...159 => {
                                     stdout_handle.write_all(&[b'M', b'-', b'^', byte - 64])?
                                 }
                                 160...254 => stdout_handle.write_all(&[b'M', b'-', byte - 128])?,
-                                255 => stdout_handle.write_all(&[b'M', b'-', b'^', b'?'])?,
+                                255 => stdout_handle.write_all(b"M-^?")?,
                                 _ => stdout_handle.write_all(&[byte])?,
                             };
                         } else {
