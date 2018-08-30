@@ -1,3 +1,8 @@
+extern crate failure;
+#[macro_use]
+extern crate failure_derive;
+
+use failure::Error;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -19,7 +24,7 @@ pub enum NumberingMode {
     None,
 }
 
-pub fn concat(options: &CatOptions, filenames: &[&str]) -> io::Result<()> {
+pub fn concat(options: &CatOptions, filenames: &[&str]) -> Result<(), Error> {
     // Check if we can print files without any manipulation (hence faster)
     if options.numbering_mode == NumberingMode::None
         && options.end_char.is_none()
@@ -92,37 +97,22 @@ pub fn concat(options: &CatOptions, filenames: &[&str]) -> io::Result<()> {
 }
 
 /// Print a list of file as-is, without any manipulation
-pub fn fast_print(filenames: &[&str]) -> io::Result<()> {
+pub fn fast_print(filenames: &[&str]) -> Result<(), Error> {
     let stdout = io::stdout();
     let mut stdout_handle = stdout.lock();
     for path in filenames {
         let mut file = open_file(path)?;
-        io::copy(&mut file, &mut stdout_handle)?;
+        io::copy(&mut file, &mut stdout_handle).with_filename(path.to_string())?;
     }
     Ok(())
 }
 
-fn open_file(path: &str) -> io::Result<Box<Read>> {
-    if path == "-" {
-        Ok(Box::new(io::stdin()))
+fn open_file(path: &str) -> Result<Box<Read>, Error> {
+    Ok(if path == "-" {
+        Box::new(io::stdin())
     } else {
-        match File::open(path) {
-            Ok(val) => {
-                if val.metadata()?.is_file() {
-                    Ok(Box::new(val))
-                } else {
-                    Err(io::Error::new(
-                        io::ErrorKind::Other,
-                        format!("Cannot open {}: Is a directory", path),
-                    ))
-                }
-            }
-            Err(val) => Err(io::Error::new(
-                val.kind(),
-                format!("Cannot open {}: {}", path, val),
-            )),
-        }
-    }
+        Box::new(File::open(path).with_filename(path.to_string())?)
+    })
 }
 
 fn is_blank(line: &[u8]) -> bool {
@@ -148,4 +138,30 @@ fn numbering_prefix(line_number: u64) -> &'static str {
         _ => 6,
     };
     &"     "[spaces - 1..]
+}
+
+#[derive(Fail, Debug)]
+struct FileError {
+    filename: String,
+    #[cause]
+    io_error: io::Error,
+}
+
+impl std::fmt::Display for FileError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}: {}", self.filename, self.io_error)
+    }
+}
+
+trait ExtError<O> {
+    fn with_filename(self, filename: String) -> Result<O, FileError>;
+}
+
+impl<O> ExtError<O> for io::Result<O> {
+    fn with_filename(self, filename: String) -> Result<O, FileError> {
+        match self {
+            Ok(val) => Ok(val),
+            Err(io_error) => Err(FileError { filename, io_error }),
+        }
+    }
 }

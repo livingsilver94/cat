@@ -5,3 +5,5 @@ authors = ["livingsilver94 <fabio0x@keemail.me>"]
 
 [dependencies]
 getopts = "0.2"
+failure = "0.1.2"
+failure_derive = "0.1.2"
