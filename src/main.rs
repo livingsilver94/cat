@@ -28,49 +28,52 @@ fn main() {
             "use ^ and M- notation, except for LFD and TAB",
         )
         .optflag("h", "help", "display this help and exit");
-    if let Ok(matches) = opts.parse(&args) {
-        if matches.opt_present("h") {
-            println!(
-                "{}",
-                opts.usage(
-                    "Usage: cat [OPTION]... [FILE]...\nConcatenate FILE(s) to standard output."
-                )
-            );
-        } else {
-            let numbering_mode = if matches.opt_present("b") {
-                NonEmpty
-            } else if matches.opt_present("n") {
-                All
+    match opts.parse(&args) {
+        Ok(matches) => {
+            if matches.opt_present("h") {
+                println!(
+                    "{}",
+                    opts.usage(
+                        "Usage: cat [OPTION]... [FILE]...\nConcatenate FILE(s) to standard output."
+                    )
+                );
             } else {
-                NumberingMode::None
-            };
-            let end_char = Some("$".to_string()).filter(|_| {
-                matches.opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()])
-            });
-            let tab_char = Some("^I".to_string()).filter(|_| {
-                matches.opts_present(&['A'.to_string(), 'T'.to_string(), 't'.to_string()])
-            });
-            let options = CatOptions {
-                numbering_mode,
-                end_char,
-                squeeze_blank: matches.opt_present("s"),
-                tab_char,
-                show_nonprinting: matches.opts_present(&[
-                    'A'.to_string(),
-                    'v'.to_string(),
-                    'e'.to_string(),
-                    't'.to_string(),
-                ]),
-            };
-            let mut files: Vec<&str> = matches.free.iter().map(|x| &x[..]).collect();
-            if files.is_empty() {
-                files.push(&"-");
-            }
-            if let Err(error) = cat::concat(&options, &files) {
-                eprintln!("{}", error);
+                let numbering_mode = if matches.opt_present("b") {
+                    NonEmpty
+                } else if matches.opt_present("n") {
+                    All
+                } else {
+                    NumberingMode::None
+                };
+                let end_char = Some("$".to_string()).filter(|_| {
+                    matches.opts_present(&['A'.to_string(), 'E'.to_string(), 'e'.to_string()])
+                });
+                let tab_char = Some("^I".to_string()).filter(|_| {
+                    matches.opts_present(&['A'.to_string(), 'T'.to_string(), 't'.to_string()])
+                });
+                let options = CatOptions {
+                    numbering_mode,
+                    end_char,
+                    squeeze_blank: matches.opt_present("s"),
+                    tab_char,
+                    show_nonprinting: matches.opts_present(&[
+                        'A'.to_string(),
+                        'v'.to_string(),
+                        'e'.to_string(),
+                        't'.to_string(),
+                    ]),
+                };
+                let mut files: Vec<&str> = matches.free.iter().map(|x| &x[..]).collect();
+                if files.is_empty() {
+                    files.push(&"-");
+                }
+                if let Err(error) = cat::concat(&options, &files) {
+                    eprintln!("{}", error);
+                }
             }
         }
-    } else {
-        eprintln!("Cannot parse arguments.");
+        Err(error) => {
+            eprintln!("{}", error);
+        }
     }
 }
