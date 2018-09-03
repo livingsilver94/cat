@@ -90,6 +90,7 @@ pub fn concat(options: &CatOptions, filenames: &[&str]) -> Result<(), Error> {
                     stdout_handle.write_all(&buf)?;
                 }
                 buf.clear();
+                stdout_handle.flush()?;
             }
         }
     }
